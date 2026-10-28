@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uma surpresa pra você 🎁</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="fundo.gif">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { font-family: system-ui, sans-serif; background: #fff0f5; }
+
+  #botao {
+    position: fixed;
+    padding: 16px 32px;
+    font-size: 1.3rem;
+    border: none;
+    border-radius: 999px;
+    background: #e91e63;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(233, 30, 99, .4);
+    touch-action: manipulation;
+  }
+
+  #cartao {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    padding: 16px;
+    overflow-y: auto;
+    /* se o fundo.gif não existir, aparece só o degradê */
+    background: url(fundo.gif) center / cover no-repeat, linear-gradient(#ffe4ec, #ffb6c8);
+    font-family: 'Dancing Script', cursive;
+    text-align: center;
+    color: #222;
+  }
+  #cartao[hidden] { display: none; }
+  .texto {
+    margin: auto;
+    max-width: 600px;
+    padding: 24px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, .6);
+    text-shadow: 0 0 8px #fff;
+  }
+  .texto h1 { font-size: clamp(2.2rem, 9vw, 4rem); margin: 0 0 16px; color: #c2185b; }
+  .texto p { font-size: clamp(1.4rem, 5vw, 2rem); margin: 0 0 16px; }
+  .texto a { font-size: clamp(1.5rem, 6vw, 2.2rem); color: #c2185b; }
+</style>
+</head>
+<body>
+
+<button id="botao">Clique aqui</button>
+
+<section id="cartao" hidden>
+  <div class="texto">
+    <!-- ✏️ TROQUE O TEXTO AQUI -->
+    <h1>Feliz Aniversário, [NOME]!</h1>
+    <p>[Escreva aqui sua mensagem. Pode ter quantos parágrafos quiser, é só copiar esta linha.]</p>
+    <p>[Mais uma linha de mensagem...]</p>
+    <!-- ✏️ TROQUE O LINK DO DRIVE AQUI (compartilhado como "Qualquer pessoa com o link") -->
+    <a href="https://drive.google.com/SEU-LINK-AQUI" target="_blank" rel="noopener">Abra seu presente 🎁</a>
+  </div>
+</section>
+
+<script>
+  const MAX_FUGAS = 10; // quantas vezes o botão foge antes de deixar clicar
+  const botao = document.getElementById('botao');
+  const cartao = document.getElementById('cartao');
+  let fugas = 0;
+  let movendo = false;
+
+  // Posição aleatória (canto superior esquerdo) que cabe na tela, tentando cair longe de (px, py).
+  function novaPosicao(larguraTela, alturaTela, larguraBotao, alturaBotao, px, py) {
+    const maxX = Math.max(0, larguraTela - larguraBotao);
+    const maxY = Math.max(0, alturaTela - alturaBotao);
+    let pos;
+    for (let i = 0; i < 10; i++) {
+      pos = { x: Math.random() * maxX, y: Math.random() * maxY };
+      if (Math.hypot(pos.x + larguraBotao / 2 - px, pos.y + alturaBotao / 2 - py) > 200) break;
+    }
+    return pos;
+  }
+
+  function posicionar(x, y) {
+    botao.style.left = Math.max(0, Math.min(x, innerWidth - botao.offsetWidth)) + 'px';
+    botao.style.top = Math.max(0, Math.min(y, innerHeight - botao.offsetHeight)) + 'px';
+  }
+
+  function fugir(px, py) {
+    if (movendo || fugas >= MAX_FUGAS) return;
+    fugas++;
+    movendo = true;
+    const duracao = 0.15 + fugas * 0.1; // fica mais lento a cada fuga
+    const { x, y } = novaPosicao(innerWidth, innerHeight, botao.offsetWidth, botao.offsetHeight, px, py);
+    botao.style.transition = `left ${duracao}s ease-out, top ${duracao}s ease-out`;
+    posicionar(x, y);
+    setTimeout(() => { movendo = false; }, duracao * 1000);
+  }
+
+  // PC: foge quando o mouse chega perto, e percebe o mouse cada vez mais em cima
+  document.addEventListener('mousemove', e => {
+    const r = botao.getBoundingClientRect();
+    const raio = 150 - fugas * 12;
+    if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < raio) fugir(e.clientX, e.clientY);
+  });
+
+  // Celular (toque) e qualquer clique: foge até acabarem as fugas; clique durante o movimento não vale
+  botao.addEventListener('click', e => {
+    if (fugas < MAX_FUGAS || movendo) return fugir(e.clientX, e.clientY);
+    botao.hidden = true;
+    cartao.hidden = false;
+  });
+
+  function centralizar() {
+    posicionar((innerWidth - botao.offsetWidth) / 2, (innerHeight - botao.offsetHeight) / 2);
+  }
+
+  // mantém o botão dentro da tela quando ela muda de tamanho (ex.: girar o celular); antes da 1ª fuga, fica no centro
+  addEventListener('resize', () => fugas ? posicionar(botao.offsetLeft, botao.offsetTop) : centralizar());
+
+  centralizar();
+
+  // autoteste: a nova posição sempre cabe na tela
+  for (let i = 0; i < 100; i++) {
+    const p = novaPosicao(400, 700, 160, 56, 200, 350);
+    console.assert(p.x >= 0 && p.x <= 240 && p.y >= 0 && p.y <= 644, 'novaPosicao fora da tela', p);
+  }
+</script>
+</body>
+</html>
